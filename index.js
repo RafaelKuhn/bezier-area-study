@@ -22,6 +22,48 @@ const samplesContainer = document.getElementById("samples");
 const nMax = nSlider.max;
 const nStart = nSlider.value;
 
+const snapTog = document.getElementById("snap-tog");
+
+const fillAreaTog = document.getElementById("area-tog");
+let shouldFillArea = fillAreaTog.checked;
+
+/** @type {HTMLInputElement} */
+const snapAmntInput = document.getElementById("total-amt");
+
+/** @returns {Number} */
+const getSnapValue = () => parseFloat(snapAmntInput.value)
+
+let shouldSnap = snapTog.checked;
+let snapValue = getSnapValue();
+
+const onToggleSnap = isOn => {
+
+
+
+	if (isOn) {
+		snapAmntInput.parentNode.classList.add("snap-on")
+		snapAmntInput.parentNode.classList.remove("snap-off")
+
+	} else {
+		snapAmntInput.parentNode.classList.add("snap-off")
+		snapAmntInput.parentNode.classList.remove("snap-on")
+
+	}
+}
+
+onToggleSnap(snapTog.checked)
+
+const onChangeSnapValue = () => {
+	snapValue = getSnapValue();
+}
+
+const onFillAreaTogChanged = () => {
+	shouldFillArea = fillAreaTog.checked;
+	// console.log(`fill area: ${shouldFillArea}`);
+
+	render()
+}
+
 const samplePElements = [];
 
 const createPForSample = () => {
@@ -35,7 +77,7 @@ const updateP = (i, x, y) => {
 	samplePElements[i].textContent = `${x.toFixed(4)} | ${y.toFixed(4)}`;
 }
 
-const setPasBlank = (i) => {
+const setPAsBlank = (i) => {
 	samplePElements[i].textContent = "";
 }
 
@@ -70,6 +112,9 @@ const end =   { x: localXToGridX(7.0), y: localYToGridY(3.5) };
 const cp1 =   { x: localXToGridX(2.0), y: localYToGridY(1.0) };
 const cp2 =   { x: localXToGridX(6.0), y: localYToGridY(7.0) };
 
+// const MIN_BISSECTION_THRESHOLD = 0.0001
+const MIN_BISSECTION_THRESHOLD = 0.000001
+
 /** @param {Number} x (x is in pixel coordinates) */
 const bissectionYForX = (x) => {
 	x = gridXToLocalX(x);
@@ -82,7 +127,7 @@ const bissectionYForX = (x) => {
 	for (let i = 0; i < 50; ++i) {
 
 		const difference = Math.abs(xSample - x);
-		if (difference < 0.0001) {
+		if (difference < MIN_BISSECTION_THRESHOLD) {
 			// console.log(`took ${i} to find t: ${bisectionMid}\nx: ${xSample} ~= ${x}\ny: ${sampleCurveYAt(bisectionMid)}`);
 			return sampleCurveYAt(bisectionMid);
 		}
@@ -111,7 +156,7 @@ const invertedBissectionYForX = (x) => {
 	for (let i = 0; i < 50; ++i) {
 
 		const difference = Math.abs(xSample - x);
-		if (difference < 0.0001) {
+		if (difference < MIN_BISSECTION_THRESHOLD) {
 			return sampleCurveYAt(1 - bisectionMid);
 		}
 
@@ -241,9 +286,12 @@ const getClampedRelativeMousePos = (event) => {
 	return { x: clamp(x, 0, canvas.width), y: clamp(y, 0, canvas.height) };
 }
 
+let isMouseOverCanvas = false;
+
 /** @param {MouseEvent} event */
 const onMouseDown = (event) => {
 	const mousePos = getClampedRelativeMousePos(event);
+	if (isMouseOverCanvas) event.preventDefault()
 
 	gameData.objBeingHeld = getNearbyClosestObjectOrNull(mousePos);
 	gameData.isHolding = gameData.objBeingHeld != null;
@@ -299,32 +347,157 @@ const getNearbyClosestObjectOrNull = (mousePos) => {
 const coordinateSystemMarkLength = 10;
 const pointSize = 7;
 
+const strokeLine = (x0, y0, x1, y1) => {
+	ctx.beginPath();
+	ctx.moveTo(x0, y0);
+	ctx.lineTo(x1, y1);
+	ctx.stroke();
+}
+
+const drawTrapezoids = fillsArea => {
+	// setup
+	ctx.lineWidth = 2;
+	ctx.strokeStyle = "rgba(0, 195, 128, 255)" // = "#00c380";
+	
+	const lastN = mathData.n - 1;
+	
+	// pixel coordinates
+	let xStart = start.x;
+	let xEnd   = end.x;
+	
+	let bissectY = bissectionYForX;
+	if (xStart > xEnd) {
+		[xStart, xEnd] = [xEnd, xStart];
+		bissectY = invertedBissectionYForX;
+	}
+	
+	// pixel coordinates
+	let lastX = xStart;
+	let lastY = bissectY(lastX);
+	
+	// AREA / DOM
+	const localFirstX = gridXToLocalX(xStart);
+	const localFirstY = gridYToLocalY(lastY);
+	let area = localFirstY;
+	updateP(0, localFirstX, localFirstY);
+
+	// first line
+	if (!fillsArea)
+		strokeLine(xStart, canvas.height, lastX, lastY)
+	else {
+		ctx.beginPath();
+		ctx.moveTo(xStart, canvas.height);
+		ctx.lineTo(lastX, lastY);
+		// ctx.stroke();
+	}
+
+	// middle trapezoids
+	for (let i = 1; i < lastN; ++i) {
+		const percentage = i / lastN;
+		
+		const x = lerp(xStart, xEnd, percentage);
+		const y = bissectY(x);
+
+		if (!fillsArea) {
+			strokeLine(x, canvas.width, x, y)
+			strokeLine(lastX, lastY, x, y)
+		} else {
+			ctx.lineTo(lastX, lastY);
+		}
+
+		lastX = x;
+		lastY = y;
+
+		// AREA / DOM
+		const localY = gridYToLocalY(y);
+		area += (localY * 2);
+		updateP(i, gridXToLocalX(x), localY);
+	}
+
+	const x = lerp(xStart, xEnd, 1);
+	const y = bissectY(x);
+
+	// last trapezoid
+	if (!fillsArea) {
+		strokeLine(lastX, lastY, x, y)
+		strokeLine(x, canvas.height, x, y)
+	} else {
+		ctx.lineTo(lastX, lastY);
+		ctx.lineTo(x, y);
+		ctx.lineTo(x, canvas.height);
+		ctx.closePath();
+		// ctx.fillStyle = "rgba(0, 195, 128, 1)"; // "rgba(255, 0, 0, 0.5)"
+		// ctx.fillStyle = "rgba(0, 195, 128, 0.5)"; // "rgba(255, 0, 0, 0.5)"
+		ctx.fillStyle = "rgba(0, 195, 128, 0.8)"; // "rgba(255, 0, 0, 0.5)"
+		// ctx.fillStyle = "#ff00007F"
+		ctx.fill();
+	}
+
+	// AREA / DOM
+	const lastLocalX = gridXToLocalX(x);
+	const lastLocalY = gridYToLocalY(y);
+	area += lastLocalY;
+	area *= mathData.h * 0.5;
+
+	spanArea.style.color = "black";
+	spanArea.textContent = area.toFixed(4);
+
+	// console.log(`updating p with ${gridXToLocalX(x)}, ${lastLocalY}`);
+	updateP(lastN, lastLocalX, lastLocalY);
+
+	for (let i = lastN + 1; i < nMax; ++i) {
+		setPAsBlank(i);
+	}
+}
+
+const drawGrid = period => {
+	ctx.lineWidth = 1.5;
+	ctx.strokeStyle = "#d3d3d3";
+	for (let i = 1; i < coordinateSystemMax; ++i) {
+		const ourPeriod = period * i;
+
+		// horizontal gray lines
+		strokeLine(ourPeriod, 0, ourPeriod, canvas.height)
+		// vertical gray lines
+		strokeLine(0, ourPeriod, canvas.width, ourPeriod)
+	}
+
+	// TODO: draw snapping
+	ctx.lineWidth = 0.4;
+	ctx.strokeStyle = "#d3d3d3ff";
+	for (let i = 0.5; i < coordinateSystemMax; i += 1) {
+		const ourPeriod = period * i;
+
+		// horizontal gray lines
+		strokeLine(ourPeriod, 0, ourPeriod, canvas.height)
+		// vertical gray lines
+		strokeLine(0, ourPeriod, canvas.width, ourPeriod)
+	}
+}
+
 const drawStuff = () => {
 	// reset
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	ctx.setLineDash([0]);
 	ctx.lineWidth = 3;
 
-	// draw grid
 	const period = canvas.width / coordinateSystemMax;
-	ctx.lineWidth = 1;
-	ctx.strokeStyle = "#d3d3d3";
-	for (let i = 1; i < coordinateSystemMax; ++i) {
-		const ourPeriod = period * i;
 
-		// horizontal gray lines
-		ctx.beginPath();
-		ctx.moveTo(ourPeriod, 0);
-		ctx.lineTo(ourPeriod, canvas.height);
-		ctx.stroke();
-		
-		// vertical gray lines
-		ctx.beginPath();
-		ctx.moveTo(0, ourPeriod);
-		ctx.lineTo(canvas.width, ourPeriod);
-		ctx.stroke();
+	// DRAW TEXT
+	// ctx.font = "bold 34px Courier New"; ctx.fillStyle = "aquamarine" ctx.shadowColor = "black" ctx.shadowBlur = 2
+	// const text = "drag the anchors and control points"; const textMeasure = ctx.measureText(text); const textHeight = textMeasure.actualBoundingBoxAscent + textMeasure.actualBoundingBoxDescent;
+	// ctx.fillText(text, canvas.width / 2 - textMeasure.width / 2, textHeight);
+
+	if (!gameData.isValid) {
+		spanArea.style.color = "red";
+		spanArea.textContent = NAN;
 	}
 
+	// draws the filled trapezoids (before the controls)
+	if (gameData.isValid && shouldFillArea)
+		drawTrapezoids(true)
+
+	drawGrid(period);
 
 	// cubic bézier curve
 	ctx.lineWidth = 3;
@@ -338,16 +511,8 @@ const drawStuff = () => {
 	ctx.lineWidth = 2;
 	ctx.setLineDash([5, 7]);
 	ctx.strokeStyle = "black";
-
-	ctx.beginPath();
-	ctx.moveTo(start.x, start.y)
-	ctx.lineTo(cp1.x, cp1.y)
-	ctx.stroke();
-
-	ctx.beginPath();
-	ctx.moveTo(end.x, end.y)
-	ctx.lineTo(cp2.x, cp2.y)
-	ctx.stroke();
+	strokeLine(start.x, start.y, cp1.x, cp1.y)
+	strokeLine(end.x, end.y, cp2.x, cp2.y)
 
 	// point in the middle
 	ctx.setLineDash([0]);
@@ -357,100 +522,9 @@ const drawStuff = () => {
 	ctx.stroke();
 
 
-	// trapezoids
-	if (gameData.isValid) {
-		// setup
-		ctx.lineWidth = 2;
-		ctx.strokeStyle = "#00c380";
-		
-		const lastN = mathData.n - 1;
-		
-		// pixel coordinates
-		let xStart = start.x;
-		let xEnd   = end.x;
-		
-		let bissectY = bissectionYForX;
-		if (xStart > xEnd) {
-			[xStart, xEnd] = [xEnd, xStart];
-			bissectY = invertedBissectionYForX;
-		}
-		
-		// pixel coordinates
-		let lastX = xStart;
-		let lastY = bissectY(lastX);
-		
-		// AREA / DOM
-		const localFirstX = gridXToLocalX(xStart);
-		const localFirstY = gridYToLocalY(lastY);
-		let area = localFirstY;
-		updateP(0, localFirstX, localFirstY);
-
-		// first line
-		ctx.beginPath();
-		ctx.moveTo(xStart, canvas.width)
-		ctx.lineTo(lastX, lastY)
-		ctx.stroke();
-
-		// middle trapezoids
-		for (let i = 1; i < lastN; ++i) {
-			const percentage = i / lastN;
-			
-			const x = lerp(xStart, xEnd, percentage);
-			const y = bissectY(x);
-
-			ctx.beginPath();
-			ctx.moveTo(x, canvas.width)
-			ctx.lineTo(x, y)
-			ctx.stroke();
-
-			ctx.beginPath();
-			ctx.moveTo(lastX, lastY)
-			ctx.lineTo(x, y)
-			ctx.stroke();
-
-			lastX = x;
-			lastY = y;
-
-			// AREA / DOM
-			const localY = gridYToLocalY(y);
-			area += (localY * 2);
-			updateP(i, gridXToLocalX(x), localY);
-		}
-
-		const x = lerp(xStart, xEnd, 1);
-		const y = bissectY(x);
-
-		// last trapezoid
-		ctx.beginPath();
-		ctx.moveTo(x, canvas.width)
-		ctx.lineTo(x, y)
-		ctx.stroke();
-
-		ctx.beginPath();
-		ctx.moveTo(lastX, lastY)
-		ctx.lineTo(x, y)
-		ctx.stroke();
-
-		// AREA / DOM
-		const lastLocalX = gridXToLocalX(x);
-		const lastLocalY = gridYToLocalY(y);
-		area += lastLocalY;
-		area *= mathData.h * 0.5;
-
-		spanArea.style.color = "black";
-		spanArea.textContent = area.toFixed(4);
-
-		// console.log(`updating p with ${gridXToLocalX(x)}, ${lastLocalY}`);
-		updateP(lastN, lastLocalX, lastLocalY);
-
-		for (let i = lastN + 1; i < nMax; ++i) {
-			setPasBlank(i);
-		}
-
-	} else {
-		spanArea.style.color = "red";
-		spanArea.textContent = NAN;
-	}
+	// draws the hollow trapezoids (after the curve)
+	if (gameData.isValid && !shouldFillArea)
+		drawTrapezoids(false)
 
 
 	// start and end points
@@ -471,24 +545,18 @@ const drawStuff = () => {
 	ctx.lineWidth = 2;
 	ctx.strokeStyle = "black";
 	ctx.fillStyle = "black";
+	// ctx.lineWidth = 1.5;
+	// ctx.strokeStyle = "#d3d3d3";
 	ctx.font = "24px serif";
 	for (let i = 1; i < coordinateSystemMax; ++i) {
 		const ourPeriod = period * i;
 
 		// horizontal cartesian coordinates
-		ctx.beginPath();
-		ctx.moveTo(ourPeriod, canvas.height);
-		ctx.lineTo(ourPeriod, canvas.height - coordinateSystemMarkLength);
-		ctx.stroke();
-		
+		strokeLine(ourPeriod, canvas.height, ourPeriod, canvas.height - coordinateSystemMarkLength)
 		ctx.fillText(i, ourPeriod - 6, canvas.height - 15);
 		
 		// vertical cartesian coordinates
-		ctx.beginPath();
-		ctx.moveTo(0, ourPeriod);
-		ctx.lineTo(coordinateSystemMarkLength, ourPeriod);
-		ctx.stroke();
-
+		strokeLine(0, ourPeriod, coordinateSystemMarkLength, ourPeriod)
 		ctx.fillText(i, 15, canvas.height - ourPeriod + 6);
 	}
 
@@ -521,6 +589,14 @@ const render = () => {
 window.addEventListener("mousedown", onMouseDown);
 window.addEventListener("mouseup",   onMouseUp);
 window.addEventListener("mousemove", mouseMove);
+
+canvas.addEventListener("mouseover", () => isMouseOverCanvas = true)
+canvas.addEventListener("mouseout",  () => isMouseOverCanvas = false)
+
+snapTog.addEventListener("change", () => onToggleSnap(snapTog.checked))
+snapAmntInput.addEventListener("change", () => console.log("changed to " + getSnapValue()))
+
+fillAreaTog.addEventListener("change", onFillAreaTogChanged)
 
 nSlider.addEventListener("mousemove", render);
 

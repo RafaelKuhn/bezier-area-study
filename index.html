@@ -9,18 +9,50 @@
 	<title>Beziér Area</title>
 </head>
 <body>
-	
+	<div class="fix">
+		
+		<div class="toggle-item">
+			<p class="vert">
+				<label class="switch"><input id="area-tog" type="checkbox" class="inputao" checked="true">
+					<span class="slider round"></span>
+				</label>
+				Fill Area
+			</p>
+		</div>
+
+		<div class="toggle-item">
+			<p class="vert">
+				<label class="switch"><input id="snap-tog" type="checkbox" class="inputao">
+					<span class="slider round"></span>
+				</label>
+				Snapping
+			</p>
+		</div>
+
+		<div>
+			<p class="threshold">Threshold</p>
+			<input type="number" step="0.1" id="total-amt" value="0.5" >
+		</div>
+	</div>
+
 	<div id="container">
-		<canvas width="400" height="400" id="canvao"></canvas>
+
+		<div class="canvas-wrap">
+			<canvas width="400" height="400" id="canvao" ></canvas>
+			<div class="top-container">
+				<p class="display">Drag the <span class="blue">Anchors</span> and <span class="red">Control Points!</span></p>
+			</div>
+		</div>
+
 		<div id="right">
 			<p>N: <span id="n"></span></p>
-			<input id="nSlider" type="range" value="4" min="2" max="31"></input>
+			<input id="nSlider" type="range" value="4" min="2" max="31" />
 			
 			<br><br><br>
-			<p>H: <span id="h"></span></p>
+			<p>Area: <span id="area"></span></p>
 			
 			<br>
-			<p>Area: <span id="area"></span></p>
+			<p>H: <span id="h"></span></p>
 			
 			<div id="samplesDiv">
 				
