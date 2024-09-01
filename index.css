@@ -69,8 +69,14 @@ p.threshold {
 }
 
 
+input[type='number']{
+	height: 25px;
+}
+
+
+
 #container {
-	padding: 8px;
+	padding: 8px 8px 0px 8px;
 	gap: 30px;
 	display: flex;
 	align-items: flex-start;
@@ -97,6 +103,7 @@ div.top-container {
 
 div.canvas-wrap {
 	position: relative;
+	height: 50%;
 }
 
 
