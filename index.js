@@ -23,8 +23,13 @@ const nMax = nSlider.max;
 const nStart = nSlider.value;
 
 const snapTog = document.getElementById("snap-tog");
+/** @type {HTMLSpanElement} */
+const snapTogSlider = snapTog.parentNode.querySelector(".slider");
 
 const fillAreaTog = document.getElementById("area-tog");
+/** @type {HTMLSpanElement} */
+const fillAreaTogSlider = fillAreaTog.parentNode.querySelector(".slider");
+
 let shouldFillArea = fillAreaTog.checked;
 
 /** @type {HTMLInputElement} */
@@ -87,13 +92,10 @@ const snapPoint = point => {
 	}
 }
 
-const updateSnapStateAndHtml = isOn => {
-	// TODO:
-	// console.log(`snap state: ${isOn}`);
-	
-	shouldSnap = isOn;
+const updateSnapStateAndHtml = () => {
+	shouldSnap = snapTog.checked;
 
-	if (isOn) {
+	if (shouldSnap) {
 		snapAmntInput.parentNode.classList.add("snap-on")
 		snapAmntInput.parentNode.classList.remove("snap-off")
 	} else {
@@ -102,7 +104,7 @@ const updateSnapStateAndHtml = isOn => {
 	}
 }
 
-updateSnapStateAndHtml(snapTog.checked);
+updateSnapStateAndHtml();
 
 const onChangeSnapValue = () => {
 	snapThreshold = getSnapValue();
@@ -522,7 +524,6 @@ const drawTrapezoids = fillsArea => {
 	spanArea.style.color = "black";
 	spanArea.textContent = area.toFixed(4);
 
-	// console.log(`updating p with ${gridXToLocalX(x)}, ${lastLocalY}`);
 	updateP(lastN, lastLocalX, lastLocalY);
 
 	for (let i = lastN + 1; i < nMax; ++i) {
@@ -667,7 +668,7 @@ const snapAllPointsIfNeeded = () => {
 snapAllPointsIfNeeded()
 
 const onToggleSnap = () => {
-	updateSnapStateAndHtml(snapTog.checked);
+	updateSnapStateAndHtml();
 
 	snapAllPointsIfNeeded()
 	render();
@@ -697,3 +698,9 @@ fillAreaTog.addEventListener("change", onFillAreaTogChanged)
 nSlider.addEventListener("input", render);
 
 render();
+
+// this only needed for a duplicated window, for some reason
+snapTogSlider.addEventListener("transitionstart", onToggleSnap);
+snapTogSlider.addEventListener("transitionend", onToggleSnap);
+fillAreaTogSlider.addEventListener("transitionstart", onFillAreaTogChanged);
+fillAreaTogSlider.addEventListener("transitionend", onFillAreaTogChanged);
