@@ -46,16 +46,30 @@ p.vert {
 }
 
 
-.snap-on {
+div.snap-on {
 	display: block;
 
 	position: absolute;
   opacity: 1;
   pointer-events: all;
 
+	left: 0; 
+  right: 0; 
+  margin-left: auto; 
+  margin-right: auto;
+	width: 100%;
 }
 
-.snap-off {
+div.snap-on input[type='number'] {
+	margin-left: auto; 
+  margin-right: auto;
+	height: 25px;
+	display: block;
+	width: 40%;
+	/* width: 100%; */
+}
+
+div.snap-off {
 	display: none;
 
   opacity: 0;
@@ -69,9 +83,6 @@ p.threshold {
 }
 
 
-input[type='number']{
-	height: 25px;
-}
 
 
 
@@ -119,6 +130,13 @@ p.display {
   margin: 0;
 
 	/* text-transform: uppercase; */
+
+	pointer-events: none;
+	-webkit-user-select: none; /* Safari */        
+	-moz-user-select: none; /* Firefox */
+	-ms-user-select: none; /* IE10+/Edge */
+	user-select: none; /* Standard */
+		
 }
 
 span.red  {

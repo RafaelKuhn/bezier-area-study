@@ -45,8 +45,8 @@ const getSnapValue = () => {
 		snapAmount = parseFloat(snapAmntInput.max);
 	}
 
-	if (snapAmount < parseFloat(snapAmntInput.min)) {
-		snapAmntInput.value = snapAmntInput.min;
+	if (snapAmount < 0.1) {
+		snapAmntInput.value = 0.1;
 		snapAmount = parseFloat(snapAmntInput.min);
 	}
 
@@ -63,16 +63,34 @@ const snapAllPoints = () => {
 	snapPoint(end)
 }
 
+const clampPoint = point => {
+	point.x = clamp(point.x, 0, canvas.width);
+	point.y = clamp(point.y, 0, canvas.height);
+}
+
 /** @param {{ x: number, y: number }} point */
 const snapPoint = point => {
-	const xLocal = Math.round(gridXToLocalX(point.x) / snapThreshold) * snapThreshold
-	point.x = clamp(localXToGridX(xLocal), 0, canvas.width);
 
-	const yLocal = Math.round(gridYToLocalY(point.y) / snapThreshold) * snapThreshold
-	point.y = clamp(localYToGridY(yLocal), 0, canvas.height);
+	if (point.x > canvas.width) {
+		point.x = canvas.width;
+	} else {
+		const xLocalSnapped = Math.round(gridXToLocalX(point.x) / snapThreshold) * snapThreshold
+		point.x = clamp(localXToGridX(xLocalSnapped), 0, canvas.width);
+	}
+
+	// our coordinate system's Y starts in the bottom of the screen
+	if (point.y < 0) {
+		point.y = 0;
+	} else {
+		const yLocalSnapped = Math.round(gridYToLocalY(point.y) / snapThreshold) * snapThreshold
+		point.y = clamp(localYToGridY(yLocalSnapped), 0, canvas.height);
+	}
 }
 
 const updateSnapStateAndHtml = isOn => {
+	// TODO:
+	// console.log(`snap state: ${isOn}`);
+	
 	shouldSnap = isOn;
 
 	if (isOn) {
@@ -92,7 +110,6 @@ const onChangeSnapValue = () => {
 
 const onFillAreaTogChanged = () => {
 	shouldFillArea = fillAreaTog.checked;
-	// console.log(`fill area: ${shouldFillArea}`);
 
 	render()
 }
@@ -122,6 +139,7 @@ for (let i = 0; i < nMax; ++i) {
 
 
 // constants
+const MOUSE_BUTTON_LEFT = 0;
 const TAU = 6.28318530;
 const NAN = + +'javascript é uma merda kkkkkk';
 const coordinateSystemMax = 8;
@@ -312,50 +330,48 @@ const clamp = (x, min, max) => {
  * @param {MouseEvent} event
  * @returns {{ x: Number, y: Number }}
  */
-const getClampedRelativeMousePos = (event) => {
+const getMousePosRelativeToCanvas = (event) => {
 	const x = event.pageX - canvasRect.left;
 	const y = event.pageY - canvasRect.top;
 
-	return { x: clamp(x, 0, canvas.width), y: clamp(y, 0, canvas.height) };
+	return { x, y };
 }
 
 let isMouseOverCanvas = false;
 
-/** @param {MouseEvent} event */
-const onMouseDown = event => {
+/** @param {MouseEvent} evt */
+const onMouseDown = evt => {
+	if (evt.button != MOUSE_BUTTON_LEFT) return;
 
 	// prevents selecting text
-	if (isMouseOverCanvas)
-		event.preventDefault()
+	if (isMouseOverCanvas) evt.preventDefault()
 
-	const mousePos = getClampedRelativeMousePos(event);
+	const mousePos = getMousePosRelativeToCanvas(evt);
 
 	gameData.objBeingHeld = getNearbyClosestObjectOrNull(mousePos);
 	gameData.isHolding = gameData.objBeingHeld != null;
 	gameData.isValid = getIsValidArea();
 
-	mouseMove(event);
+	mouseMove(evt);
 }
 
-/** @param {MouseEvent} event */
-const onMouseUp = event => {
-	if (!isMouseOverCanvas) {
-		document.body.style.cursor = "default"
-	}
+/** @param {MouseEvent} evt */
+const onMouseUp = evt => {
+	if (evt.button != MOUSE_BUTTON_LEFT) return;
+
+	if (!isMouseOverCanvas) document.body.style.cursor = "default"
 	
-	const mousePos = getClampedRelativeMousePos(event);
+	const mousePos = getMousePosRelativeToCanvas(evt);
 	const hoveringANode = getNearbyClosestObjectOrNull(mousePos) != null;
-	if (!hoveringANode) {
-		document.body.style.cursor = "default"
-	}
+	if (!hoveringANode) document.body.style.cursor = "default"
 
 	gameData.isHolding = false;
 	gameData.objBeingHeld = null;
 }
 
-/** @param {MouseEvent} event */
-const mouseMove = event => {
-	const mousePos = getClampedRelativeMousePos(event);
+/** @param {MouseEvent} evt */
+const mouseMove = evt => {
+	const mousePos = getMousePosRelativeToCanvas(evt);
 
 	const objectBeingHovered = getNearbyClosestObjectOrNull(mousePos);
 	if (gameData.isHolding) {
@@ -373,11 +389,11 @@ const mouseMove = event => {
 		gameData.objBeingHeld.x = mousePos.x;
 		gameData.objBeingHeld.y = mousePos.y;
 		snapPoint(gameData.objBeingHeld);
-		snapPoint(gameData.objBeingHeld);
 
 	} else {
 		gameData.objBeingHeld.x = mousePos.x;
 		gameData.objBeingHeld.y = mousePos.y;
+		clampPoint(gameData.objBeingHeld);
 
 	}
 	gameData.isValid = getIsValidArea();
@@ -629,16 +645,17 @@ const drawStuff = () => {
 
 const updateDom = () => {
 	spanN.textContent = mathData.n - 1;
+
 	if (gameData.isValid) {
 		spanH.textContent = mathData.h.toFixed(4);
 		spanH.style.color = "black";
 		samplesDiv.style.display = "block";
-	}
-	
-	else {
+
+	} else {
 		spanH.textContent	= NAN;
 		spanH.style.color = "red"
 		samplesDiv.style.display = "none";
+
 	}
 }
 
@@ -657,8 +674,8 @@ const onToggleSnap = () => {
 }
 
 const render = () => {
-	drawStuff();
 	updateMathData();
+	drawStuff();
 	updateDom();
 }
 
@@ -677,6 +694,6 @@ snapAmntInput.addEventListener("change", onChangeSnapValue)
 
 fillAreaTog.addEventListener("change", onFillAreaTogChanged)
 
-nSlider.addEventListener("mousemove", render);
+nSlider.addEventListener("input", render);
 
 render();
