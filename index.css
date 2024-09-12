@@ -10,6 +10,7 @@ body {
 
 canvas {
 	background-color: beige;
+	touch-action: none;
 }
 
 input, p {
@@ -36,20 +37,15 @@ p.vert {
 
 	line-height: 1.5rem;
 	user-select: none;
-}
 
-.fix {
-	position: fixed;
-	/* width: ; */
-	top: 10px;
-	right: 20px;
+	white-space: nowrap;
+	display: inline;
 }
 
 
 div.snap-on {
 	display: block;
 
-	position: absolute;
   opacity: 1;
   pointer-events: all;
 
@@ -66,7 +62,6 @@ div.snap-on input[type='number'] {
 	height: 25px;
 	display: block;
 	width: 40%;
-	/* width: 100%; */
 }
 
 div.snap-off {
@@ -84,14 +79,8 @@ p.threshold {
 
 
 
-
-
 #container {
 	padding: 8px 8px 0px 8px;
-	gap: 30px;
-	display: flex;
-	align-items: flex-start;
-	justify-content: flex-start;
 }
 
 div.top-container {
@@ -114,7 +103,6 @@ div.top-container {
 
 div.canvas-wrap {
 	position: relative;
-	height: 50%;
 }
 
 
@@ -136,7 +124,6 @@ p.display {
 	-moz-user-select: none; /* Firefox */
 	-ms-user-select: none; /* IE10+/Edge */
 	user-select: none; /* Standard */
-		
 }
 
 span.red  {
@@ -148,10 +135,6 @@ span.blue {
 	text-shadow: -0.7px 0 black, 0 0.7px black, 0.7px 0 black, 0 -0.7px black;
 }
 
-
-#right {
-	min-width: 165px;
-}
 
 .center {
 	text-align: center;
@@ -242,3 +225,32 @@ input:checked + .slider:before {
 .slider.round:before {
 	border-radius: 50%;
 }
+
+
+
+div.flex {
+
+	gap: 30px;
+	display: flex;
+	justify-content: flex-start;
+	align-items: flex-start;
+
+	flex-wrap: wrap;
+}
+
+div.flexin {
+	/* background-color: rgba(000, 000, 000, 0.2); */
+
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	
+	flex: 1;
+
+	gap: 15px;
+}
+
+/* div.canvas-wrap { background-color: chartreuse; } */
+/* div.second { background-color: rgba(050, 050, 255, 0.2); } */
+/* div.third { background-color: rgba(255, 000, 000, 0.2); } */
+/* div.flexin { background-color: rgba(000, 000, 000, 0.2); } */

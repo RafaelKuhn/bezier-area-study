@@ -9,8 +9,10 @@ const canvas = document.getElementById("canvao");
 const ctx = canvas.getContext("2d");
 const canvasRect = canvas.getBoundingClientRect();
 
-canvas.height = document.body.clientHeight - 16;
-canvas.width  = canvas.height;
+const isMobile = new RegExp('Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini').test(navigator.userAgent);
+if (isMobile) {
+	document.querySelector(".display").style.fontSize = "1.2rem"
+}
 
 const spanN = document.getElementById("n");
 const spanH = document.getElementById("h");
@@ -34,6 +36,28 @@ let shouldFillArea = fillAreaTog.checked;
 
 /** @type {HTMLInputElement} */
 const snapAmntInput = document.getElementById("total-amt");
+
+const resize = () => {
+	const isMobileUI = isMobile || document.body.clientHeight > document.body.clientWidth;
+
+	if (!isMobileUI) {
+		const newDimension = document.body.clientHeight - 16;
+		reassignAnchorCoordsOnResize(canvas.width, canvas.height, newDimension, newDimension);
+
+		canvas.height = newDimension;
+		canvas.width  = newDimension;
+
+	} else {
+
+		const newDimension = document.body.clientWidth - 16;
+		reassignAnchorCoordsOnResize(canvas.width, canvas.height, newDimension, newDimension);
+
+		canvas.width  = newDimension;
+		canvas.height = newDimension;
+
+	}
+
+}
 
 /** @returns {Number} */
 const getSnapValue = () => {
@@ -62,10 +86,10 @@ let shouldSnap = snapTog.checked;
 let snapThreshold = getSnapValue();
 
 const snapAllPoints = () => {
-	snapPoint(start)
-	snapPoint(cp1)
-	snapPoint(cp2)
-	snapPoint(end)
+	snapPoint(start);
+	snapPoint(cp1);
+	snapPoint(cp2);
+	snapPoint(end);
 }
 
 const clampPoint = point => {
@@ -102,12 +126,6 @@ const updateSnapStateAndHtml = () => {
 		snapAmntInput.parentNode.classList.add("snap-off")
 		snapAmntInput.parentNode.classList.remove("snap-on")
 	}
-}
-
-updateSnapStateAndHtml();
-
-const onChangeSnapValue = () => {
-	snapThreshold = getSnapValue();
 }
 
 const onFillAreaTogChanged = () => {
@@ -161,9 +179,25 @@ const localYToGridY = (y) => canvas.height - (y / coordinateSystemMax * canvas.w
 
 // Points for the curve
 const start = { x: localXToGridX(1.0), y: localYToGridY(4.5) };
-const end =   { x: localXToGridX(7.0), y: localYToGridY(3.5) };
-const cp1 =   { x: localXToGridX(2.0), y: localYToGridY(1.0) };
-const cp2 =   { x: localXToGridX(6.0), y: localYToGridY(7.0) };
+const end   = { x: localXToGridX(7.0), y: localYToGridY(3.5) };
+const cp1   = { x: localXToGridX(2.0), y: localYToGridY(1.0) };
+const cp2   = { x: localXToGridX(6.0), y: localYToGridY(7.0) };
+
+const reassignAnchorCoordsOnResize = (widOld, heiOld, widNew, heiNew) => {
+	// console.log(`resized [${widOld},${heiOld}] -> ${widNew},${heiNew}`);
+
+	start.x = start.x / widOld * widNew;
+	start.y = start.y / heiOld * heiNew;
+
+	cp1.x = cp1.x / widOld * widNew;
+	cp1.y = cp1.y / heiOld * heiNew;
+
+	cp2.x = cp2.x / widOld * widNew;
+	cp2.y = cp2.y / heiOld * heiNew;
+
+	end.x = end.x / widOld * widNew;
+	end.y = end.y / heiOld * heiNew;
+}
 
 // const MIN_BISSECTION_THRESHOLD = 0.0001
 const MIN_BISSECTION_THRESHOLD = 0.000001
@@ -341,28 +375,58 @@ const getMousePosRelativeToCanvas = (event) => {
 
 let isMouseOverCanvas = false;
 
+
+const onTouchDown = evt => {
+	onPtrDown(evt);
+}
+
+const onTouchUp = evt => {
+	onPtrUp(evt);
+}
+
+const onTouchMove = evt => {
+	onPtrMove(evt);
+}
+
+
 /** @param {MouseEvent} evt */
 const onMouseDown = evt => {
 	if (evt.button != MOUSE_BUTTON_LEFT) return;
 
 	// prevents selecting text
-	if (isMouseOverCanvas) evt.preventDefault()
+	if (isMouseOverCanvas) evt.preventDefault();
 
-	const mousePos = getMousePosRelativeToCanvas(evt);
-
-	gameData.objBeingHeld = getNearbyClosestObjectOrNull(mousePos);
-	gameData.isHolding = gameData.objBeingHeld != null;
-	gameData.isValid = getIsValidArea();
-
-	mouseMove(evt);
+	onPtrDown(evt)
 }
+
 
 /** @param {MouseEvent} evt */
 const onMouseUp = evt => {
 	if (evt.button != MOUSE_BUTTON_LEFT) return;
 
 	if (!isMouseOverCanvas) document.body.style.cursor = "default"
-	
+
+	onPtrUp(evt);
+}
+
+/** @param {MouseEvent} evt */
+const onMouseMove = evt => {
+	if (isMouseOverCanvas) evt.preventDefault();
+	onPtrMove(evt);
+}
+
+
+const onPtrDown = evt => {
+	const mousePos = getMousePosRelativeToCanvas(evt);
+
+	gameData.objBeingHeld = getNearbyClosestObjectOrNull(mousePos);
+	gameData.isHolding = gameData.objBeingHeld != null;
+	gameData.isValid = getIsValidArea();
+
+	onMouseMove(evt);
+}
+
+const onPtrUp = evt => {
 	const mousePos = getMousePosRelativeToCanvas(evt);
 	const hoveringANode = getNearbyClosestObjectOrNull(mousePos) != null;
 	if (!hoveringANode) document.body.style.cursor = "default"
@@ -371,8 +435,7 @@ const onMouseUp = evt => {
 	gameData.objBeingHeld = null;
 }
 
-/** @param {MouseEvent} evt */
-const mouseMove = evt => {
+const onPtrMove = evt => {
 	const mousePos = getMousePosRelativeToCanvas(evt);
 
 	const objectBeingHovered = getNearbyClosestObjectOrNull(mousePos);
@@ -383,7 +446,6 @@ const mouseMove = evt => {
 	} else {
 		document.body.style.cursor = "default";
 	}
-
 
 	if (!gameData.isHolding) return;
 
@@ -402,6 +464,7 @@ const mouseMove = evt => {
 
 	render();
 }
+
 
 /**
  * @param {{ x: Number, y: Number }} point0 
@@ -427,7 +490,7 @@ const getNearbyClosestObjectOrNull = (mousePos) => {
 //  ################################ HTML ##################################
 //  ########################################################################
 const coordinateSystemMarkLength = 10;
-const pointSize = 7;
+const pointRadius = 7;
 
 const strokeLine = (x0, y0, x1, y1) => {
 	ctx.beginPath();
@@ -446,7 +509,7 @@ const drawTrapezoids = fillsArea => {
 	// pixel coordinates
 	let xStart = start.x;
 	let xEnd   = end.x;
-	
+
 	let bissectY = bissectionYForX;
 	if (xStart > xEnd) {
 		[xStart, xEnd] = [xEnd, xStart];
@@ -600,7 +663,7 @@ const drawStuff = () => {
 	ctx.setLineDash([0]);
 	const point = sampleCurveAt(0.5);
 	ctx.beginPath();
-	ctx.arc(point.x, point.y, pointSize, 0, TAU);
+	ctx.arc(point.x, point.y, pointRadius, 0, TAU);
 	ctx.stroke();
 
 
@@ -612,15 +675,15 @@ const drawStuff = () => {
 	// start and end points
 	ctx.fillStyle = "blue";
 	ctx.beginPath();
-	ctx.arc(start.x, start.y, pointSize, 0, TAU);
-	ctx.arc(end.x,   end.y,   pointSize, 0, TAU);
+	ctx.arc(start.x, start.y, pointRadius, 0, TAU);
+	ctx.arc(end.x,   end.y,   pointRadius, 0, TAU);
 	ctx.fill();
 
 	// control points
 	ctx.fillStyle = "red";
 	ctx.beginPath();
-	ctx.arc(cp1.x, cp1.y, pointSize, 0, TAU);
-	ctx.arc(cp2.x, cp2.y, pointSize, 0, TAU);
+	ctx.arc(cp1.x, cp1.y, pointRadius, 0, TAU);
+	ctx.arc(cp2.x, cp2.y, pointRadius, 0, TAU);
 	ctx.fill();
 
 	// cartesian coordinates
@@ -665,13 +728,15 @@ const snapAllPointsIfNeeded = () => {
 		snapAllPoints();
 }
 
-snapAllPointsIfNeeded()
-
 const onToggleSnap = () => {
 	updateSnapStateAndHtml();
 
 	snapAllPointsIfNeeded()
 	render();
+}
+
+const onChangeSnapValue = () => {
+	snapThreshold = getSnapValue();
 }
 
 const render = () => {
@@ -683,12 +748,22 @@ const render = () => {
 //  ########################################################################
 //  ############################# BOOTSTRAP ################################
 //  ########################################################################
-window.addEventListener("mousedown", onMouseDown);
-window.addEventListener("mouseup",   onMouseUp);
-window.addEventListener("mousemove", mouseMove);
 
-canvas.addEventListener("mouseover", () => isMouseOverCanvas = true)
-canvas.addEventListener("mouseout",  () => isMouseOverCanvas = false)
+if (isMobile) {
+	window.addEventListener("pointerdown", onTouchDown);
+	window.addEventListener("pointerup",   onTouchUp);
+	window.addEventListener("pointermove", onTouchMove);
+
+} else {
+
+	window.addEventListener("mousedown", onMouseDown);
+	window.addEventListener("mouseup",   onMouseUp);
+	window.addEventListener("mousemove", onMouseMove);
+
+	canvas.addEventListener("mouseover", () => isMouseOverCanvas = true);
+	canvas.addEventListener("mouseout",  () => isMouseOverCanvas = false);
+}
+
 
 snapTog.addEventListener("change", onToggleSnap)
 snapAmntInput.addEventListener("change", onChangeSnapValue)
@@ -697,10 +772,20 @@ fillAreaTog.addEventListener("change", onFillAreaTogChanged)
 
 nSlider.addEventListener("input", render);
 
-render();
-
 // this only needed for a duplicated window, for some reason
 snapTogSlider.addEventListener("transitionstart", onToggleSnap);
 snapTogSlider.addEventListener("transitionend", onToggleSnap);
 fillAreaTogSlider.addEventListener("transitionstart", onFillAreaTogChanged);
 fillAreaTogSlider.addEventListener("transitionend", onFillAreaTogChanged);
+
+
+window.onresize = () => {
+	resize();
+	render();
+};
+
+snapAllPointsIfNeeded()
+updateSnapStateAndHtml();
+
+resize();
+render();
