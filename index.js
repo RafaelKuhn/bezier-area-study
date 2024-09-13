@@ -9,6 +9,11 @@ const canvas = document.getElementById("canvao");
 const ctx = canvas.getContext("2d");
 const canvasRect = canvas.getBoundingClientRect();
 
+const canvasDims = {
+	 width: canvas.width,
+	height: canvas.height,
+}
+
 const isMobile = new RegExp('Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini').test(navigator.userAgent);
 if (isMobile) {
 	document.querySelector(".display").style.fontSize = "1.2rem"
@@ -40,23 +45,29 @@ const snapAmntInput = document.getElementById("total-amt");
 const resize = () => {
 	const isMobileUI = isMobile || document.body.clientHeight > document.body.clientWidth;
 
-	if (!isMobileUI) {
-		const newDimension = document.body.clientHeight - 16;
-		reassignAnchorCoordsOnResize(canvas.width, canvas.height, newDimension, newDimension);
+	const pixelRatio =
+		(window.devicePixelRatio || 1) /
+		(ctx.webkitBackingStorePixelRatio ||
+			ctx.mozBackingStorePixelRatio ||
+			ctx.msBackingStorePixelRatio ||
+			ctx.oBackingStorePixelRatio ||
+			ctx.backingStorePixelRatio || 1)
 
-		canvas.height = newDimension;
-		canvas.width  = newDimension;
+	const newDimension = isMobileUI ? document.body.clientWidth - 16 : document.body.clientHeight - 16;
 
-	} else {
+	canvas.width  = newDimension * pixelRatio;
+	canvas.height = newDimension * pixelRatio;
 
-		const newDimension = document.body.clientWidth - 16;
-		reassignAnchorCoordsOnResize(canvas.width, canvas.height, newDimension, newDimension);
+	reassignAnchorCoordsOnResize(canvasDims.width, canvasDims.height, newDimension, newDimension);
 
-		canvas.width  = newDimension;
-		canvas.height = newDimension;
+	canvasDims.width  = newDimension;
+	canvasDims.height = newDimension;
 
-	}
+	canvas.style.width  = `${canvasDims.width}px`
+	canvas.style.height = `${canvasDims.height}px`
 
+	ctx.scale(pixelRatio, pixelRatio);
+	// ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 }
 
 /** @returns {Number} */
@@ -79,7 +90,7 @@ const getSnapValue = () => {
 		snapAmount = parseFloat(snapAmntInput.min);
 	}
 
-	return parseFloat(snapAmntInput.value)
+	return parseFloat(snapAmntInput.value);
 }
 
 let shouldSnap = snapTog.checked;
@@ -93,18 +104,18 @@ const snapAllPoints = () => {
 }
 
 const clampPoint = point => {
-	point.x = clamp(point.x, 0, canvas.width);
-	point.y = clamp(point.y, 0, canvas.height);
+	point.x = clamp(point.x, 0, canvasDims.width);
+	point.y = clamp(point.y, 0, canvasDims.height);
 }
 
 /** @param {{ x: number, y: number }} point */
 const snapPoint = point => {
 
-	if (point.x > canvas.width) {
-		point.x = canvas.width;
+	if (point.x > canvasDims.width) {
+		point.x = canvasDims.width;
 	} else {
 		const xLocalSnapped = Math.round(gridXToLocalX(point.x) / snapThreshold) * snapThreshold
-		point.x = clamp(localXToGridX(xLocalSnapped), 0, canvas.width);
+		point.x = clamp(localXToGridX(xLocalSnapped), 0, canvasDims.width);
 	}
 
 	// our coordinate system's Y starts in the bottom of the screen
@@ -112,7 +123,7 @@ const snapPoint = point => {
 		point.y = 0;
 	} else {
 		const yLocalSnapped = Math.round(gridYToLocalY(point.y) / snapThreshold) * snapThreshold
-		point.y = clamp(localYToGridY(yLocalSnapped), 0, canvas.height);
+		point.y = clamp(localYToGridY(yLocalSnapped), 0, canvasDims.height);
 	}
 }
 
@@ -120,18 +131,18 @@ const updateSnapStateAndHtml = () => {
 	shouldSnap = snapTog.checked;
 
 	if (shouldSnap) {
-		snapAmntInput.parentNode.classList.add("snap-on")
-		snapAmntInput.parentNode.classList.remove("snap-off")
+		snapAmntInput.parentNode.classList.add("snap-on");
+		snapAmntInput.parentNode.classList.remove("snap-off");
 	} else {
-		snapAmntInput.parentNode.classList.add("snap-off")
-		snapAmntInput.parentNode.classList.remove("snap-on")
+		snapAmntInput.parentNode.classList.add("snap-off");
+		snapAmntInput.parentNode.classList.remove("snap-on");
 	}
 }
 
 const onFillAreaTogChanged = () => {
 	shouldFillArea = fillAreaTog.checked;
 
-	render()
+	render();
 }
 
 const samplePElements = [];
@@ -154,7 +165,7 @@ const setPAsBlank = (i) => {
 for (let i = 0; i < nMax; ++i) {
 	const p = createPForSample();
 	samplePElements.push(p);
-	samplesContainer.appendChild(p)
+	samplesContainer.appendChild(p);
 }
 
 
@@ -171,11 +182,11 @@ const coordinateSystemMax = 8;
 const lerp = (a, b, t) => (1 - t) * a + t * b;
 const inverseLerp = (a, b, v) => (v - a) / (b - a);
 
-const gridXToLocalX = (x) => x / canvas.width * coordinateSystemMax;
-const gridYToLocalY = (y) => coordinateSystemMax - (y / canvas.height * coordinateSystemMax);
+const gridXToLocalX = (x) => x / canvasDims.width * coordinateSystemMax;
+const gridYToLocalY = (y) => coordinateSystemMax - (y / canvasDims.height * coordinateSystemMax);
 
-const localXToGridX = (x) => x / coordinateSystemMax * canvas.width;
-const localYToGridY = (y) => canvas.height - (y / coordinateSystemMax * canvas.width);
+const localXToGridX = (x) => x / coordinateSystemMax * canvasDims.width;
+const localYToGridY = (y) => canvasDims.height - (y / coordinateSystemMax * canvasDims.width);
 
 // Points for the curve
 const start = { x: localXToGridX(1.0), y: localYToGridY(4.5) };
@@ -396,7 +407,7 @@ const onMouseDown = evt => {
 	// prevents selecting text
 	if (isMouseOverCanvas) evt.preventDefault();
 
-	onPtrDown(evt)
+	onPtrDown(evt);
 }
 
 
@@ -528,10 +539,10 @@ const drawTrapezoids = fillsArea => {
 
 	// first line
 	if (!fillsArea)
-		strokeLine(xStart, canvas.height, lastX, lastY)
+		strokeLine(xStart, canvasDims.height, lastX, lastY);
 	else {
 		ctx.beginPath();
-		ctx.moveTo(xStart, canvas.height);
+		ctx.moveTo(xStart, canvasDims.height);
 		ctx.lineTo(lastX, lastY);
 		// ctx.stroke();
 	}
@@ -544,8 +555,8 @@ const drawTrapezoids = fillsArea => {
 		const y = bissectY(x);
 
 		if (!fillsArea) {
-			strokeLine(x, canvas.width, x, y)
-			strokeLine(lastX, lastY, x, y)
+			strokeLine(x, canvasDims.width, x, y);
+			strokeLine(lastX, lastY, x, y);
 		} else {
 			ctx.lineTo(lastX, lastY);
 		}
@@ -564,12 +575,12 @@ const drawTrapezoids = fillsArea => {
 
 	// last trapezoid
 	if (!fillsArea) {
-		strokeLine(lastX, lastY, x, y)
-		strokeLine(x, canvas.height, x, y)
+		strokeLine(lastX, lastY, x, y);
+		strokeLine(x, canvasDims.height, x, y);
 	} else {
 		ctx.lineTo(lastX, lastY);
 		ctx.lineTo(x, y);
-		ctx.lineTo(x, canvas.height);
+		ctx.lineTo(x, canvasDims.height);
 		ctx.closePath();
 		// ctx.fillStyle = "rgba(0, 195, 128, 1)"; // "rgba(255, 0, 0, 0.5)"
 		// ctx.fillStyle = "rgba(0, 195, 128, 0.5)"; // "rgba(255, 0, 0, 0.5)"
@@ -601,36 +612,35 @@ const drawGrid = period => {
 		const ourPeriod = period * i;
 
 		// horizontal gray lines
-		strokeLine(ourPeriod, 0, ourPeriod, canvas.height)
+		strokeLine(ourPeriod, 0, ourPeriod, canvasDims.height);
 		// vertical gray lines
-		strokeLine(0, ourPeriod, canvas.width, ourPeriod)
+		strokeLine(0, ourPeriod, canvasDims.width, ourPeriod);
 	}
 
-	// TODO: draw snapping
 	ctx.lineWidth = 0.4;
 	ctx.strokeStyle = "#d3d3d3ff";
 	for (let i = 0.5; i < coordinateSystemMax; i += 1) {
 		const ourPeriod = period * i;
 
 		// horizontal gray lines
-		strokeLine(ourPeriod, 0, ourPeriod, canvas.height)
+		strokeLine(ourPeriod, 0, ourPeriod, canvasDims.height);
 		// vertical gray lines
-		strokeLine(0, ourPeriod, canvas.width, ourPeriod)
+		strokeLine(0, ourPeriod, canvasDims.width, ourPeriod);
 	}
 }
 
 const drawStuff = () => {
 	// reset
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	ctx.clearRect(0, 0, canvasDims.width, canvasDims.height);
 	ctx.setLineDash([0]);
 	ctx.lineWidth = 3;
 
-	const period = canvas.width / coordinateSystemMax;
+	const period = canvasDims.width / coordinateSystemMax;
 
 	// DRAW TEXT
-	// ctx.font = "bold 34px Courier New"; ctx.fillStyle = "aquamarine" ctx.shadowColor = "black" ctx.shadowBlur = 2
+	// ctx.font = "bold 34px Courier New"; ctx.fillStyle = "aquamarine"; ctx.shadowColor = "black"; ctx.shadowBlur = 2
 	// const text = "drag the anchors and control points"; const textMeasure = ctx.measureText(text); const textHeight = textMeasure.actualBoundingBoxAscent + textMeasure.actualBoundingBoxDescent;
-	// ctx.fillText(text, canvas.width / 2 - textMeasure.width / 2, textHeight);
+	// ctx.fillText(text, canvasDims.width / 2 - textMeasure.width / 2, textHeight);
 
 	if (!gameData.isValid) {
 		spanArea.style.color = "red";
@@ -639,7 +649,7 @@ const drawStuff = () => {
 
 	// draws the filled trapezoids (before the controls)
 	if (gameData.isValid && shouldFillArea)
-		drawTrapezoids(true)
+		drawTrapezoids(true);
 
 	drawGrid(period);
 
@@ -656,8 +666,8 @@ const drawStuff = () => {
 	ctx.lineWidth = 2;
 	ctx.setLineDash([5, 7]);
 	ctx.strokeStyle = "black";
-	strokeLine(start.x, start.y, cp1.x, cp1.y)
-	strokeLine(end.x, end.y, cp2.x, cp2.y)
+	strokeLine(start.x, start.y, cp1.x, cp1.y);
+	strokeLine(end.x, end.y, cp2.x, cp2.y);
 
 	// point in the middle
 	ctx.setLineDash([0]);
@@ -669,7 +679,7 @@ const drawStuff = () => {
 
 	// draws the hollow trapezoids (after the curve)
 	if (gameData.isValid && !shouldFillArea)
-		drawTrapezoids(false)
+		drawTrapezoids(false);
 
 
 	// start and end points
@@ -697,12 +707,12 @@ const drawStuff = () => {
 		const ourPeriod = period * i;
 
 		// horizontal cartesian coordinates
-		strokeLine(ourPeriod, canvas.height, ourPeriod, canvas.height - coordinateSystemMarkLength)
-		ctx.fillText(i, ourPeriod - 6, canvas.height - 15);
+		strokeLine(ourPeriod, canvasDims.height, ourPeriod, canvasDims.height - coordinateSystemMarkLength);
+		ctx.fillText(i, ourPeriod - 6, canvasDims.height - 15);
 		
 		// vertical cartesian coordinates
-		strokeLine(0, ourPeriod, coordinateSystemMarkLength, ourPeriod)
-		ctx.fillText(i, 15, canvas.height - ourPeriod + 6);
+		strokeLine(0, ourPeriod, coordinateSystemMarkLength, ourPeriod);
+		ctx.fillText(i, 15, canvasDims.height - ourPeriod + 6);
 	}
 
 }
@@ -731,7 +741,7 @@ const snapAllPointsIfNeeded = () => {
 const onToggleSnap = () => {
 	updateSnapStateAndHtml();
 
-	snapAllPointsIfNeeded()
+	snapAllPointsIfNeeded();
 	render();
 }
 
@@ -765,10 +775,10 @@ if (isMobile) {
 }
 
 
-snapTog.addEventListener("change", onToggleSnap)
-snapAmntInput.addEventListener("change", onChangeSnapValue)
+snapTog.addEventListener("change", onToggleSnap);
+snapAmntInput.addEventListener("change", onChangeSnapValue);
 
-fillAreaTog.addEventListener("change", onFillAreaTogChanged)
+fillAreaTog.addEventListener("change", onFillAreaTogChanged);
 
 nSlider.addEventListener("input", render);
 
@@ -784,8 +794,9 @@ window.onresize = () => {
 	render();
 };
 
-snapAllPointsIfNeeded()
+resize();
+snapAllPointsIfNeeded();
+
 updateSnapStateAndHtml();
 
-resize();
 render();

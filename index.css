@@ -83,6 +83,10 @@ p.threshold {
 	padding: 8px 8px 0px 8px;
 }
 
+#nSlider {
+	touch-action: none;
+}
+
 div.top-container {
 	position: absolute;
 	top: 0;
