@@ -29,10 +29,12 @@ const samplesContainer = document.getElementById("samples");
 const nMax = nSlider.max;
 const nStart = nSlider.value;
 
+/** @type {HTMLInputElement} */
 const snapTog = document.getElementById("snap-tog");
 /** @type {HTMLSpanElement} */
 const snapTogSlider = snapTog.parentNode.querySelector(".slider");
 
+/** @type {HTMLInputElement} */
 const fillAreaTog = document.getElementById("area-tog");
 /** @type {HTMLSpanElement} */
 const fillAreaTogSlider = fillAreaTog.parentNode.querySelector(".slider");
@@ -45,13 +47,14 @@ const snapAmntInput = document.getElementById("total-amt");
 const resize = () => {
 	const isMobileUI = isMobile || document.body.clientHeight > document.body.clientWidth;
 
+	// https://stackoverflow.com/questions/15661339/how-do-i-fix-blurry-text-in-my-html5-canvas
 	const pixelRatio =
 		(window.devicePixelRatio || 1) /
 		(ctx.webkitBackingStorePixelRatio ||
 			ctx.mozBackingStorePixelRatio ||
 			ctx.msBackingStorePixelRatio ||
 			ctx.oBackingStorePixelRatio ||
-			ctx.backingStorePixelRatio || 1)
+			ctx.backingStorePixelRatio || 1);
 
 	const newDimension = isMobileUI ? document.body.clientWidth - 16 : document.body.clientHeight - 16;
 
